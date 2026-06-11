@@ -39,6 +39,18 @@ subprocess.run([sys.executable, "quantum_upper_bound.py"], cwd="C:/Users/Milton/
 
 print("\n\n")
 print("="*60)
+print("S-GATE AS A D-CTC FIXED POINT (s_gate_unitary.py)")
+print("="*60)
+subprocess.run([sys.executable, "s_gate_unitary.py"], cwd="C:/Users/Milton/ctc-circuit")
+
+print("\n\n")
+print("="*60)
+print("PSPACE GADGET -> D-CTC SOLVER BRIDGE (pspace_ctc_bridge.py)")
+print("="*60)
+subprocess.run([sys.executable, "pspace_ctc_bridge.py"], cwd="C:/Users/Milton/ctc-circuit")
+
+print("\n\n")
+print("="*60)
 print("P-CTC = PP COMPLEXITY RESULT (ptc_pp_result.py)")
 print("="*60)
 subprocess.run([sys.executable, "ptc_pp_result.py"], cwd="C:/Users/Milton/ctc-circuit")
@@ -63,8 +75,10 @@ print("""
     ctc_core.py              P_CTC <= PSPACE  (Deutsch fixed-point, Lemma 1)
     ptc_circuit.py           P-CTC simulation (Bell pair + postselection)
     bacon_s_gate.py          NP <= D-CTC      (S-gate, Bacon 2004)
+    s_gate_unitary.py        NP S-gate as a real D-CTC fixed point (Bacon's U=SWAP.CNOT)
     config_graph_gadget.py   PSPACE <= P_CTC  (C' gadget, A-W Lemma 2)
     quantum_upper_bound.py   BQP_CTC <= PSPACE (Cesaro resolvent, Thms 3-5)
+    pspace_ctc_bridge.py     PSPACE gadget solved by the shared D-CTC solver
     ptc_pp_result.py         P-CTC = PP       (PostBQP=PP, Aaronson 2005)
     complexity_landscape.py  Full diagram     (capstone)
 

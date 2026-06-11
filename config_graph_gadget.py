@@ -369,12 +369,12 @@ def demo_complexity():
   then reads the fixed point — no iteration needed in theory.
   That structural encoding is why it reaches PSPACE, not just NP.
 
-  NEXT STEP (to close the loop completely)
-  Wire ctc_core.find_fixed_point() on the quantum version:
-  Build U_tm as a unitary encoding one TM step, embed in the
-  Deutsch channel, find the density-matrix fixed point via
-  the Cesaro-resolvent (A-W Theorems 3-5). This gives the
-  BQP_CTC = PSPACE upper bound to match Lemma 2 from below.
+  LOOP CLOSED (pspace_ctc_bridge.py)
+  The C' map above is now dilated to a Deutsch unitary U and solved by
+  ctc_core.find_fixed_point() / the superoperator + Cesaro resolvent from
+  quantum_upper_bound.py -- the SAME machinery that clones qubits. The
+  bespoke power iteration in this file is no longer the only solver: every
+  one of the 16 inputs is decided by the genuine D-CTC fixed point.
 """)
 
 

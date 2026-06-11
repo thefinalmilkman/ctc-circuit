@@ -34,24 +34,41 @@ def controlled(U):
 
 # --- Core ---
 
-def partial_trace_over_sys(rho):
-    """Trace out the first (system) qubit from a 4x4 density matrix."""
-    return rho[0:2, 0:2] + rho[2:4, 2:4]
+def partial_trace_over_sys(rho, d_sys=2, d_ctc=2):
+    """Trace out the first (system) subsystem from a (d_sys*d_ctc)-dim density
+    matrix, leaving the d_ctc-dim CTC register.
+
+    Defaults (2, 2) reproduce the original two-qubit block formula
+    rho[0:2,0:2] + rho[2:4,2:4]; passing larger dims handles the
+    config-graph gadget, where the CTC register spans n reachable configs.
+    """
+    t = rho.reshape(d_sys, d_ctc, d_sys, d_ctc)
+    return np.einsum('ikil->kl', t)
 
 
 def dtc_channel(U, rho_sys, rho_ctc):
-    """Apply one step of the D-CTC channel: Tr_sys[U(rho_sys x rho_ctc)U+]."""
+    """Apply one step of the D-CTC channel: Tr_sys[U(rho_sys x rho_ctc)U+].
+    System and CTC dimensions are inferred from rho_sys and rho_ctc, so the
+    same channel serves the two-qubit demos and the n-config PSPACE gadget."""
+    d_sys = rho_sys.shape[0]
+    d_ctc = rho_ctc.shape[0]
     joint = np.kron(rho_sys, rho_ctc)
     evolved = U @ joint @ U.conj().T
-    return partial_trace_over_sys(evolved)
+    return partial_trace_over_sys(evolved, d_sys, d_ctc)
 
 
 def find_fixed_point(U, rho_sys, max_iter=10000):
     """
     Iterate D-CTC channel until convergence.
     Returns (rho_ctc_fixed, iterations).
+
+    The CTC dimension is inferred as dim(U) / dim(rho_sys), so this is the
+    single solver used by every file in the repo: qubit cloning (d_ctc=2)
+    and the A-W PSPACE config-graph gadget (d_ctc = #reachable configs).
     """
-    rho_ctc = np.eye(2, dtype=complex) / 2  # maximally mixed start
+    d_sys = rho_sys.shape[0]
+    d_ctc = U.shape[0] // d_sys
+    rho_ctc = np.eye(d_ctc, dtype=complex) / d_ctc  # maximally mixed start
 
     for i in range(1, max_iter + 1):
         rho_new = dtc_channel(U, rho_sys, rho_ctc)

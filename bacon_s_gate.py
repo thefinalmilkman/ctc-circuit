@@ -26,6 +26,12 @@ Poly(n) iterations suffice. This puts NP in poly-gate CTC circuits.
 The full PSPACE result (A-W 2009) uses the config-graph stationary
 distribution gadget instead — encodes any PSPACE TM step, reads the
 fixed point.
+
+NOTE: this file implements S(rho) as the ALGEBRAIC formula directly.
+For the same squaring realised as a genuine Deutsch fixed point of
+Bacon's exact 2-qubit unitary U = SWAP.CNOT (his Eq. 11, solved by
+ctc_core.find_fixed_point), see s_gate_unitary.py — the squaring appears
+in the chronology-respecting OUTPUT, not the CTC register.
 """
 
 import itertools

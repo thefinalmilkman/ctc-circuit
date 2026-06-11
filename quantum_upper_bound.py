@@ -51,33 +51,27 @@ THREE FIXED-POINT METHODS (all demonstrated here)
 3. Cesaro resolvent: z * inv(I - (1-z)*K) @ v0     [PSPACE proof]
 """
 
+import os
 import sys
 import numpy as np
 
+# The fixed-point solver lives in ctc_core — import it rather than re-inline,
+# so this file and the PSPACE gadget share one solver (dimension-agnostic).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    from ctc_core import dtc_channel, find_fixed_point  # noqa: E402
+except ModuleNotFoundError:
+    # Fallback for isolated runners that copy this file elsewhere.
+    sys.path.insert(0, "C:/Users/Milton/ctc-circuit")
+    from ctc_core import dtc_channel, find_fixed_point  # noqa: E402
+
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-# Inline from ctc_core to avoid path dependency
 _I2 = np.eye(2, dtype=complex)
 X    = np.array([[0, 1], [1, 0]], dtype=complex)
 H    = np.array([[1, 1], [1, -1]], dtype=complex) / np.sqrt(2)
 CNOT = np.array([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]], dtype=complex)
 SWAP = np.array([[1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]], dtype=complex)
-
-def dtc_channel(U, rho_sys, rho_ctc):
-    joint = np.kron(rho_sys, rho_ctc)
-    evol  = U @ joint @ U.conj().T
-    return evol[0:2, 0:2] + evol[2:4, 2:4]
-
-def find_fixed_point(U, rho_sys, max_iter=10000):
-    rho = np.eye(2, dtype=complex) / 2
-    for i in range(1, max_iter + 1):
-        rho_new = dtc_channel(U, rho_sys, rho)
-        rho_new = (rho_new + rho_new.conj().T) / 2
-        rho_new /= np.trace(rho_new)
-        if np.allclose(rho, rho_new, atol=1e-12):
-            return rho_new, i
-        rho = rho_new
-    return rho, max_iter
 
 SEP = "=" * 62
 
@@ -86,12 +80,14 @@ SEP = "=" * 62
 # SUPEROPERATOR
 # ----------------------------------------------------------------
 
-def build_superoperator(U, rho_sys):
+def build_superoperator(U, rho_sys, N=2):
     """
     Build K: the N^2 x N^2 matrix representing the CPTP map Phi.
     Probe Phi on each standard basis matrix to populate columns.
+
+    N is the CTC-register dimension: 2 for a qubit, or the number of
+    reachable configs for the A-W PSPACE gadget.
     """
-    N = 2   # CTC qubit dimension
     K = np.zeros((N * N, N * N), dtype=complex)
     for j in range(N * N):
         e = np.zeros(N * N, dtype=complex)
@@ -105,17 +101,19 @@ def build_superoperator(U, rho_sys):
 # FIXED-POINT METHODS
 # ----------------------------------------------------------------
 
-def fixed_point_eigenvector(K):
+def fixed_point_eigenvector(K, N=2):
     """
     Find physical fixed-point density matrices via eigenvectors of K.
     Returns list of (rho, eigenvalue_residual) for physical fixed points.
+
+    N is the CTC-register dimension (2 for a qubit, #configs for the gadget).
     """
     evals, evecs = np.linalg.eig(K)
     results = []
     for i, ev in enumerate(evals):
         if abs(ev - 1.0) > 1e-8:
             continue
-        rho = evecs[:, i].reshape(2, 2)
+        rho = evecs[:, i].reshape(N, N)
         rho = (rho + rho.conj().T) / 2          # Hermitianize
         tr = np.trace(rho).real
         if abs(tr) < 1e-12:
@@ -127,19 +125,19 @@ def fixed_point_eigenvector(K):
     return results
 
 
-def cesaro_resolvent(K, z, v0=None):
+def cesaro_resolvent(K, z, v0=None, N=2):
     """
     R_z = z * inv(I - (1-z)*K).
-    Applied to v0 (default: vec(I/2)) and reshaped to density matrix.
+    Applied to v0 (default: vec(I/N)) and reshaped to an N x N density matrix.
     This is the PSPACE-computable fixed-point finder (A-W Theorem 4).
     """
     N2 = K.shape[0]
     I = np.eye(N2, dtype=complex)
     R_z = z * np.linalg.inv(I - (1 - z) * K)
     if v0 is None:
-        v0 = (np.eye(2, dtype=complex) / 2).flatten()
+        v0 = (np.eye(N, dtype=complex) / N).flatten()
     proj = R_z @ v0
-    rho = proj.reshape(2, 2)
+    rho = proj.reshape(N, N)
     rho = (rho + rho.conj().T) / 2
     tr = np.trace(rho).real
     return rho / tr if abs(tr) > 1e-12 else rho
@@ -331,6 +329,7 @@ def demo_theorem():
   config_graph_gadget.py    PSPACE <= P_CTC (Lemma 2) C' circuit + cycle det.
   ctc_core.py               P_CTC <= PSPACE (Lemma 1) find_fixed_point() iter.
   quantum_upper_bound.py    BQP_CTC <= PSPACE (Thm 5) Cesaro resolvent
+  pspace_ctc_bridge.py      gadget on the solver      C' as a Deutsch channel
   bacon_s_gate.py           NP <= D-CTC     (Bacon 04) S-gate squaring
 
   CHAIN:
